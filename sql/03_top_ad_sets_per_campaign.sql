@@ -1,4 +1,4 @@
--- Top 3 ad sets per campaign by cost per approved conversion
+-- Only rank ad sets with at least 5 sales
 
 WITH ad_set_stats AS (
   SELECT
@@ -15,7 +15,7 @@ WITH ad_set_stats AS (
     ON f.ad_set_id = s.ad_set_id
   GROUP BY s.campaign_id, s.ad_set_id, s.age_group, s.gender, s.interest_code
   -- Prevent small ad sets from top ranks (skewed data)
-  HAVING SUM(f.approved_conversions) > 0 AND SUM(f.spend) >= 10)
+  HAVING SUM(f.approved_conversions) >= 5)
 
   
 SELECT
