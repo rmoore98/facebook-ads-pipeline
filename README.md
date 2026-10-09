@@ -11,7 +11,7 @@ My biggest discovery is the inverse relationship between click-through rate and 
 | Women 45–49 | 0.025% (highest) | 1.2% (lowest) | 22.9% | 10.4% | \$119.94 |
 | Men 30–34 | 0.012% (lowest) | 6.8% (highest) | 13.0% | 27.7% | \$25.55 |
 
-*Conversion rate is the share of clicks that became purchases.*
+*Conversion rate is approved conversions (purchases) per click. Some purchases came from ads with no clicks, so it's an approximation.*
 
 The inverse relationship is seen in these two groups. Women aged 45–49 clicked on ads the most often, but few of their clicks turned into sales, which resulted in each purchase costing \$119.94 of the ad spend budget. Men aged 30–34 clicked least often, but made the most purchases, which resulted in each purchase costing only \$25.55.
 
@@ -37,7 +37,7 @@ flowchart LR
 
 ## The data
 
-The dataset is [Clicks Conversion Tracking on Kaggle](https://www.kaggle.com/datasets/loveall/clicks-conversion-tracking): 1,143 real (anonymized) Facebook ads from one company's social media campaigns. Each row has the ad's targeting (age, gender, interest) and its results (impressions, clicks, spend, conversions, and approved conversions).
+The dataset is [Clicks Conversion Tracking on Kaggle](https://www.kaggle.com/datasets/loveall/clicks-conversion-tracking): 1,143 real (anonymized) Facebook ads from one company's social media campaigns. Each row has the ad's targeting (age, gender, interest) and its results (impressions, clicks, spend, conversions, and approved conversions). Conversions are inquiries about the product, and approved conversions are purchases.
 
 ## Structure
 
@@ -55,7 +55,7 @@ Before building the schema, I double-checked that every ad set did map to exactl
 
 ## Cleaning decisions
 
-- **Conversions without clicks:** One of the first things I noticed while exploring was the 204 ads that had conversions but did not have clicks. Had I deleted these rows like I originally considered, I would have missed data from likely view-through conversions. To account for the zero clicks, I measured conversions per 1,000 impressions alongside per click.
+- **Conversions without clicks:** One of the first things I noticed while exploring was the 204 ads that had conversions (inquiries) but no clicks, and 71 of those also had approved conversions (purchases). Had I deleted these rows like I originally considered, I would have missed data from likely view-through conversions, where someone sees an ad, doesn't click, and acts later. To account for the zero clicks, I measured purchases per 1,000 impressions alongside per click.
 - **Pay per click:** The ads with zero clicks also had zero spend. This suggests these ads were billed per click.
 - **Skewed numbers:** The average impressions were misleading. Some ads had millions of impressions while the median was around 51,000, so I compared groups using rates instead.
 - **Raw spend values:** Small rounding errors in spend values were corrected to cents.
@@ -68,12 +68,13 @@ Before saving anything, `transform.py` checks 8 rules, including unique IDs in e
 
 - **The campaign that accounted for almost all of the ad spend was the least efficient.** Campaign 1178 used 94.8% of the total ad spend but cost \$63.83 per sale. Campaign 916 cost only \$6.24 per sale, but due to its small count of just 54 ads, that result is less certain to hold up.
 - **One audience worked at real scale.** Ad set 144533 (men 30–34, interest code 16) spent \$542 and got 37 sales at \$14.65 each, about four times cheaper than its campaign's average.
+- **Ages 30–34 drove the cheapest results.** 9 of the 10 ad sets with the lowest cost per sale targeted ages 30–34, matching the audience segment results.
 
 ## A mistake I almost made
 
 When I initially wrote and ran the "top ad sets" query, I ranked ad sets by cost per sale. This returned a misleading result set that looked good, but only pulled ad sets that spent \$10–\$22 and had 1–4 sales. These small numbers can hide the true winners.
 
-To account for this, I modified the query to filter for ad sets with at least five sales. The results changed, revealing that campaign 1178 was the only campaign with ad sets large enough to judge, and ad set 144533 emerged as a more believable top performer.
+To account for this, I modified the query to only include ad sets with at least five sales. Every ad set that qualified came from campaign 1178, the only campaign with ad sets large enough to judge. Ad set 144533 ranked third by cost per sale ($14.65), but the two ahead of it had only 7 and 8 sales. With 37 sales at nearly the same cost, 144533 is the more believable top performer.
 
 ## What I learned
 
