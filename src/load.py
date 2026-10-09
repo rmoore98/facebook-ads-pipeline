@@ -1,18 +1,16 @@
-"""Load: upload the processed star schema tables to BigQuery."""
-import logging
+"""Load: upload the three processed tables to BigQuery.
+Run from the project folder: python src/load.py
+"""
 import os
-from pathlib import Path
 
 from google.cloud import bigquery
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-log = logging.getLogger(__name__)
-
+# Uses my project by default; set GCP_PROJECT_ID to use your own
 PROJECT_ID = os.getenv("GCP_PROJECT_ID", "facebook-ads-pipeline-510822")
 DATASET_ID = "facebook_ads"
-PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
+PROCESSED_DIR = "data/processed"
 
-# Explicit schemas, so BigQuery never has to guess column types.
+# Explicit column types, so BigQuery never has to guess
 SCHEMAS = {
     "dim_campaign": [
         bigquery.SchemaField("campaign_id", "INT64", mode="REQUIRED"),
@@ -36,30 +34,32 @@ SCHEMAS = {
 }
 
 
-def load_table(client: bigquery.Client, table_name: str) -> None:
+def load_table(client, table_name):
     """Upload one CSV, replacing the table if it already exists."""
-    path = PROCESSED_DIR / f"{table_name}.csv"
-    table_ref = f"{PROJECT_ID}.{DATASET_ID}.{table_name}"
+    path = f"{PROCESSED_DIR}/{table_name}.csv"
+    table_id = f"{PROJECT_ID}.{DATASET_ID}.{table_name}"
+
     job_config = bigquery.LoadJobConfig(
         source_format=bigquery.SourceFormat.CSV,
-        skip_leading_rows=1,
+        skip_leading_rows=1,  # skip the header row
         schema=SCHEMAS[table_name],
-        # Replace rather than append, so rerunning never creates duplicates.
+        # Replace rather than append, so rerunning never creates duplicates
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
     )
+
     with open(path, "rb") as f:
-        job = client.load_table_from_file(f, table_ref, job_config=job_config)
+        job = client.load_table_from_file(f, table_id, job_config=job_config)
     job.result()  # wait for the upload to finish; raises an error if it failed
 
-    loaded = client.get_table(table_ref).num_rows
-    log.info("Loaded %s: %d rows", table_ref, loaded)
+    table = client.get_table(table_id)
+    print(f"Loaded {table_id}: {table.num_rows} rows")
 
 
-def main() -> None:
+def main():
     client = bigquery.Client(project=PROJECT_ID)
     for table_name in SCHEMAS:
         load_table(client, table_name)
-    log.info("All tables loaded into %s.%s", PROJECT_ID, DATASET_ID)
+    print("All tables loaded")
 
 
 if __name__ == "__main__":
